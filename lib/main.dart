@@ -8,51 +8,81 @@ class TodoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: TodoScreen(),
+      title: 'Todolist',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: TodoListScreen(),
     );
   }
 }
 
-class TodoScreen extends StatefulWidget {
-  @override
-  _TodoScreenState createState() => _TodoScreenState();
+class Task {
+  String title;
+  bool isCompleted;
+  DateTime deadline;
+  DateTime? completedAt;
+
+  Task({
+    required this.title,
+    this.isCompleted = false,
+    required this.deadline,
+    this.completedAt,
+  });
 }
 
-class _TodoScreenState extends State<TodoScreen> {
-  final List<Map<String, dynamic>> _tasks = [
-    {'title': 'Купить молоко', 'completed': false},
-    {'title': 'Сделать домашку', 'completed': false},
-    {'title': 'Прочитать книгу', 'completed': false},
-  ];
+class TodoListScreen extends StatefulWidget {
+  @override
+  _TodoListScreenState createState() => _TodoListScreenState();
+}
 
-  final TextEditingController _controller = TextEditingController();
+class _TodoListScreenState extends State<TodoListScreen> {
+  final List<Task> tasks = [];
+  final TextEditingController _taskController = TextEditingController();
+  DateTime? _selectedDeadline;
 
   void _addTask() {
-    if (_controller.text.isNotEmpty) {
+    if (_taskController.text.isEmpty || _selectedDeadline == null) return;
+    setState(() {
+      tasks
+          .add(Task(title: _taskController.text, deadline: _selectedDeadline!));
+      _taskController.clear();
+      _selectedDeadline = null;
+    });
+  }
+
+  void _toggleTaskCompletion(Task task) {
+    setState(() {
+      task.isCompleted = !task.isCompleted;
+      task.completedAt = task.isCompleted ? DateTime.now() : null;
+    });
+  }
+
+  void _deleteTask(Task task) {
+    setState(() {
+      tasks.remove(task);
+    });
+  }
+
+  Future<void> _selectDeadline(BuildContext context) async {
+    DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
+
+    if (pickedDate != null) {
       setState(() {
-        _tasks.add({'title': _controller.text, 'completed': false});
-        _controller.clear();
+        _selectedDeadline = pickedDate;
       });
     }
-  }
-
-  void _toggleTask(int index) {
-    setState(() {
-      _tasks[index]['completed'] = !_tasks[index]['completed'];
-    });
-  }
-
-  void _deleteTask(int index) {
-    setState(() {
-      _tasks.removeAt(index);
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Список задач')),
+      appBar: AppBar(title: Text('Todo List')),
       body: Column(
         children: [
           Padding(
@@ -61,38 +91,52 @@ class _TodoScreenState extends State<TodoScreen> {
               children: [
                 Expanded(
                   child: TextField(
-                    controller: _controller,
-                    decoration: InputDecoration(labelText: 'Новая задача'),
+                    controller: _taskController,
+                    decoration: InputDecoration(labelText: 'Введите задачу'),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: _addTask,
+                  icon: Icon(Icons.calendar_today),
+                  onPressed: () => _selectDeadline(context),
                 ),
+                ElevatedButton(
+                  onPressed: _addTask,
+                  child: Text('Добавить'),
+                )
               ],
             ),
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: _tasks.length,
+              itemCount: tasks.length,
               itemBuilder: (context, index) {
+                final task = tasks[index];
                 return ListTile(
                   title: Text(
-                    _tasks[index]['title'],
+                    task.title,
                     style: TextStyle(
-                      decoration: _tasks[index]['completed']
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      color: _tasks[index]['completed'] ? Colors.grey : null,
+                      decoration:
+                          task.isCompleted ? TextDecoration.lineThrough : null,
+                      color: task.isCompleted
+                          ? (task.completedAt!.isBefore(task.deadline)
+                              ? Colors.green
+                              : Colors.red)
+                          : Colors.black,
                     ),
                   ),
-                  leading: Checkbox(
-                    value: _tasks[index]['completed'],
-                    onChanged: (value) => _toggleTask(index),
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(Icons.delete, color: Colors.red),
-                    onPressed: () => _deleteTask(index),
+                  subtitle: Text("Дедлайн: ${task.deadline.toLocal()}"),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(task.isCompleted ? Icons.undo : Icons.check),
+                        onPressed: () => _toggleTaskCompletion(task),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete),
+                        onPressed: () => _deleteTask(task),
+                      ),
+                    ],
                   ),
                 );
               },
