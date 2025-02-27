@@ -5,13 +5,13 @@ void main() {
 }
 
 class TodoApp extends StatelessWidget {
+  const TodoApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Todolist',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue),
       home: TodoListScreen(),
     );
   }
@@ -22,16 +22,19 @@ class Task {
   bool isCompleted;
   DateTime deadline;
   DateTime? completedAt;
+  String category;
 
-  Task({
-    required this.title,
-    this.isCompleted = false,
-    required this.deadline,
-    this.completedAt,
-  });
+  Task(
+      {required this.title,
+      this.isCompleted = false,
+      required this.deadline,
+      this.completedAt,
+      required this.category});
 }
 
 class TodoListScreen extends StatefulWidget {
+  const TodoListScreen({super.key});
+
   @override
   _TodoListScreenState createState() => _TodoListScreenState();
 }
@@ -40,12 +43,18 @@ class _TodoListScreenState extends State<TodoListScreen> {
   final List<Task> tasks = [];
   final TextEditingController _taskController = TextEditingController();
   DateTime? _selectedDeadline;
+  String _selectedCategory = "Покупки";
+
+  final List<String> categories = ["Все", "Покупки", "Работа", "Обучение"];
+  String _filterCategory = "Все";
 
   void _addTask() {
     if (_taskController.text.isEmpty || _selectedDeadline == null) return;
     setState(() {
-      tasks
-          .add(Task(title: _taskController.text, deadline: _selectedDeadline!));
+      tasks.add(Task(
+          title: _taskController.text,
+          deadline: _selectedDeadline!,
+          category: _selectedCategory));
       _taskController.clear();
       _selectedDeadline = null;
     });
@@ -81,8 +90,30 @@ class _TodoListScreenState extends State<TodoListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    List<Task> filteredTask = _filterCategory == "Все"
+        ? tasks
+        : tasks.where((task) => task.category == _filterCategory).toList();
+
     return Scaffold(
-      appBar: AppBar(title: Text('Todo List')),
+      appBar: AppBar(
+        title: Text('Todo List'),
+        actions: [
+          DropdownButton<String>(
+            value: _filterCategory,
+            onChanged: (String? newValue) {
+              setState(() {
+                _filterCategory = newValue!;
+              });
+            },
+            items: categories.map((String category) {
+              return DropdownMenuItem<String>(
+                value: category,
+                child: Text(category),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
@@ -99,6 +130,22 @@ class _TodoListScreenState extends State<TodoListScreen> {
                   icon: Icon(Icons.calendar_today),
                   onPressed: () => _selectDeadline(context),
                 ),
+                DropdownButton<String>(
+                  value: _selectedCategory,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedCategory = newValue!;
+                    });
+                  },
+                  items: categories
+                      .where((cat) => cat != "Все")
+                      .map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                ),
                 ElevatedButton(
                   onPressed: _addTask,
                   child: Text('Добавить'),
@@ -108,9 +155,9 @@ class _TodoListScreenState extends State<TodoListScreen> {
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: tasks.length,
+              itemCount: filteredTask.length,
               itemBuilder: (context, index) {
-                final task = tasks[index];
+                final task = filteredTask[index];
                 return ListTile(
                   title: Text(
                     task.title,
@@ -124,7 +171,8 @@ class _TodoListScreenState extends State<TodoListScreen> {
                           : Colors.black,
                     ),
                   ),
-                  subtitle: Text("Дедлайн: ${task.deadline.toLocal()}"),
+                  subtitle: Text(
+                      "Категория: ${task.category} | Дедлайн: ${task.deadline.toLocal()}"),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
