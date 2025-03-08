@@ -24,12 +24,13 @@ class Task {
   DateTime? completedAt;
   String category;
 
-  Task(
-      {required this.title,
-      this.isCompleted = false,
-      required this.deadline,
-      this.completedAt,
-      required this.category});
+  Task({
+    required this.title,
+    this.isCompleted = false,
+    required this.deadline,
+    this.completedAt,
+    required this.category,
+  });
 }
 
 class TodoListScreen extends StatefulWidget {
@@ -52,9 +53,10 @@ class _TodoListScreenState extends State<TodoListScreen> {
     if (_taskController.text.isEmpty || _selectedDeadline == null) return;
     setState(() {
       tasks.add(Task(
-          title: _taskController.text,
-          deadline: _selectedDeadline!,
-          category: _selectedCategory));
+        title: _taskController.text,
+        deadline: _selectedDeadline!,
+        category: _selectedCategory,
+      ));
       _taskController.clear();
       _selectedDeadline = null;
     });
@@ -82,9 +84,22 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
 
     if (pickedDate != null) {
-      setState(() {
-        _selectedDeadline = pickedDate;
-      });
+      TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (pickedTime != null) {
+        setState(() {
+          _selectedDeadline = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      }
     }
   }
 
